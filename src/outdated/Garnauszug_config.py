@@ -1,0 +1,17 @@
+dataending = ".Stop.csv"  # nur diese csv Dateien nutzen
+mainfolder = ""  # ausgewählter Überordner
+subfolder = []  # Teil der sich im Unterordner wdh.
+measurements = []  # Messreihe aus input
+cuttoffvaluelist = []
+kraftmaximum = []  # maxima der kräfte
+forcemodulusdata = []
+forcemodulus = []
+meanforcemodulus = float
+meanforcemodulusstddev = float
+kraftstddev = float
+distancelimit = 2.5  # mm
+wtotal = []
+wstddev = float
+wintervall = []
+meanwork = []
+meanmaxforce = []
