@@ -1,72 +1,58 @@
 # src/core/data_plotter.py
-from pathlib import Path  # Für die Pfadverwaltung der Plots
-import matplotlib.pyplot as plt  # Hauptbibliothek für das Plotting
-from typing import Dict  # Für Type Hints
-from .data_analyzer import YarnPulloutAnalyzer  # Für den Zugriff auf die Analysedaten
+
+import matplotlib.pyplot as plt
+from .data_analyzer import YarnPulloutAnalyzer
 
 
 class YarnPulloutPlotter:
-	"""Klasse für das Plotten von Yarn Pull-Out Daten"""
+    def __init__(self):
+        self.figure_size = (8, 6)
+        self.dpi = 300
+        self.setup_plot_style()
 
-	def __init__(self):
-		self.figure_size = (16, 12)
-		self.dpi = 150
-		self.setup_plot_style()
+    def setup_plot_style(self):
+        plt.style.use('default')  # Start with a clean slate
 
-	def setup_plot_style(self):
-		"""Konfiguriert den grundlegenden Plot-Stil"""
-		plt.style.use('default')
-		plt.rcParams['lines.linewidth'] = 4
-		plt.rcParams['axes.linewidth'] = 4
-		plt.rcParams['xtick.major.width'] = 4
-		plt.rcParams['ytick.major.width'] = 4
+        # Achsen und Ticks
+        plt.rcParams['axes.linewidth'] = 4  # Achsdicke
+        plt.rcParams['xtick.major.width'] = 4  # Tickdicke x-Achse
+        plt.rcParams['ytick.major.width'] = 4  # Tickdicke y-Achse
+        plt.rcParams['xtick.major.size'] = 8 # Tick Länge x-Achse
+        plt.rcParams['ytick.major.size'] = 8 # Tick Länge y-Achse
+        plt.rcParams['xtick.minor.size'] = 4 # Tick Länge x-Achse
+        plt.rcParams['ytick.minor.size'] = 4 # Tick Länge y-Achse
 
-	def create_plot(self, analyzer: YarnPulloutAnalyzer, title: str) -> None:
-		"""Erstellt einen Plot für die Yarn Pull-Out Daten"""
-		fig, ax = plt.subplots(figsize=self.figure_size, dpi=self.dpi)
+        # Schriftgrößen
+        plt.rcParams['font.size'] = 22  # Standard-Textgröße (wird für Ticks verwendet)
+        plt.rcParams['axes.labelsize'] = 24 # Achsenbeschriftung
+        plt.rcParams['xtick.labelsize'] = 22  # Tick-Beschriftung x-Achse
+        plt.rcParams['ytick.labelsize'] = 22  # Tick-Beschriftung y-Achse
+        plt.rcParams['axes.titlesize'] = 24  # Titelgröße
+        plt.rc('font', weight='bold')
 
-		# Achsenlimits
-		ax.set_xlim(0, 4.05)
-		ax.set_ylim(0, 2)
+        # Linien
+        plt.rcParams['lines.linewidth'] = 3  # Liniendicke der Messdaten
 
-		# Achsenbeschriftungen
-		ax.set_xlabel('Displacement [mm]', fontsize=28, fontweight='bold', fontname='Arial')
-		ax.set_ylabel('Force [kN]', fontsize=28, fontweight='bold', fontname='Arial')
 
-		# Ticks
-		ax.set_xticks([0, 1, 2, 3, 4])
-		ax.tick_params(axis='both', labelsize=22, width=4)
+    def create_plot(self, analyzer: YarnPulloutAnalyzer, title: str) -> plt.Figure:
+        fig, ax = plt.subplots(figsize=self.figure_size, dpi=self.dpi)
 
-		# Plot Daten
-		for i, measurement in enumerate(analyzer.measurements):
-			x_values = [x for x, _ in measurement if x <= 4]
-			y_values = [y for x, y in measurement if x <= 4]
-			color = plt.cm.plasma(i / len(analyzer.measurements))
-			ax.plot(x_values, y_values, color=color, linewidth=4)
+        ax.set_xlim(0, 4.05)
+        ax.set_ylim(0, 2)
 
-		# Statistik-Text
-		stats = analyzer.get_statistics()
-		self._add_statistics_text(ax, stats)
+        ax.set_xlabel('Displacement [mm]', fontweight='bold', fontname='Arial') # Schriftgröße wird über rcParams gesetzt
+        ax.set_ylabel('Force [kN]', fontweight='bold', fontname='Arial')  # Schriftgröße wird über rcParams gesetzt
 
-		plt.tight_layout()
+        ax.set_xticks([0, 1, 2, 3, 4])
+        #ax.tick_params(axis='both', labelsize=22, width=3) # width ist bereits global gesetzt
 
-	def _add_statistics_text(self, ax, stats: Dict) -> None:
-		"""Fügt statistische Informationen zum Plot hinzu"""
-		text_props = {'ha': 'right', 'va': 'top', 'weight': 'bold',
-		              'size': 24, 'transform': ax.transAxes}
+        for i, measurement in enumerate(analyzer.measurements):
+            x_values = [x for x, _ in measurement if x <= 4]
+            y_values = [y for x, y in measurement if x <= 4]
+            color = plt.cm.plasma(i / len(analyzer.measurements))
+            ax.plot(x_values, y_values, color=color) # Linienstärke ist global gesetzt
 
-		# Maximalkraft
-		ax.text(0.97, 0.97,
-		        f"F_max:\n{stats['max_force']['mean']} ± {stats['max_force']['std']} kN",
-		        **text_props)
+        ax.set_title(title, fontweight='bold', fontname='Arial') # Titel setzen
 
-		# Arbeit
-		ax.text(0.97, 0.82,
-		        f"Work {analyzer.config.distance_limit} mm:\n"
-		        f"{stats['work']['mean']} ± {stats['work']['std']} Nm",
-		        **text_props)
-
-		# Modul
-		ax.text(0.97, 0.67,
-		        f"Bond Modulus:\n{stats['modulus']['mean']} ± {stats['modulus']['std']}",
-		        **text_props)
+        plt.tight_layout()
+        return fig
