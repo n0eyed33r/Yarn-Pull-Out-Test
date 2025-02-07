@@ -6,7 +6,7 @@ from .data_analyzer import YarnPulloutAnalyzer
 
 class YarnPulloutPlotter:
     def __init__(self):
-        self.figure_size = (8, 6)
+        self.figure_size = (10, 7)
         self.dpi = 300
         self.setup_plot_style()
 
@@ -24,11 +24,11 @@ class YarnPulloutPlotter:
 
         # Schriftgrößen
         plt.rcParams['font.size'] = 22  # Standard-Textgröße (wird für Ticks verwendet)
-        plt.rcParams['axes.labelsize'] = 24 # Achsenbeschriftung
+        plt.rcParams['axes.labelsize'] = 24  # Achsenbeschriftung
         plt.rcParams['xtick.labelsize'] = 22  # Tick-Beschriftung x-Achse
+        plt.rcParams["font.weight"] = "bold"
         plt.rcParams['ytick.labelsize'] = 22  # Tick-Beschriftung y-Achse
         plt.rcParams['axes.titlesize'] = 24  # Titelgröße
-        plt.rc('font', weight='bold')
 
         # Linien
         plt.rcParams['lines.linewidth'] = 3  # Liniendicke der Messdaten
@@ -45,6 +45,7 @@ class YarnPulloutPlotter:
 
         ax.set_xticks([0, 1, 2, 3, 4])
         #ax.tick_params(axis='both', labelsize=22, width=3) # width ist bereits global gesetzt
+        ax.set_yticks([0, 0.5, 1, 1.5, 2])
 
         for i, measurement in enumerate(analyzer.measurements):
             x_values = [x for x, _ in measurement if x <= 4]
