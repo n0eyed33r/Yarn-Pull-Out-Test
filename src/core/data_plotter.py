@@ -53,7 +53,7 @@ class YarnPulloutPlotter:
             color = plt.cm.plasma(i / len(analyzer.measurements))
             ax.plot(x_values, y_values, color=color) # Linienstärke ist global gesetzt
 
-        ax.set_title(title, fontweight='bold', fontname='Arial') # Titel setzen
+        # ax.set_title(title, fontweight='bold', fontname='Arial') # Titel setzen
 
         plt.tight_layout()
         return fig

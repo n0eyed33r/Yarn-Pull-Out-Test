@@ -88,28 +88,59 @@ class YarnPulloutAnalyzer:
         except Exception as e:
             self.logger.error(f"Fehler beim Laden der Datei {filepath}: {str(e)}")
             raise
-    
+
     def calculate_force_modulus(self) -> None:
-        """Berechnet den Kraft-Modul für alle Messungen"""
+        """
+        Berechnet den Kraft-Modul für alle Messungen.
+
+        Der Modul wird aus dem Anstieg zwischen 20% und 70% der Maximalkraft berechnet,
+        wobei nur Datenpunkte VOR dem Erreichen der Maximalkraft berücksichtigt werden.
+        Dies verhindert Verfälschungen durch mögliche Kraftanstiege nach dem ersten Maximum.
+        """
         self.force_moduli = []
-        
+
         for measurement, max_force in zip(self.measurements, self.max_forces):
             try:
-                # Finde Punkt mit maximaler Kraft
+                # Finde Punkt mit maximaler Kraft und dessen Index
                 max_point = max(measurement, key=lambda point: point[1])
-                
-                # Finde Punkte bei 20% und 70% der Maximalkraft
+                max_force_index = measurement.index(max_point)
+
+                # Berechne Schwellwerte
                 threshold_20 = max_point[1] * self.config.force_threshold_low
                 threshold_70 = max_point[1] * self.config.force_threshold_high
-                
-                # Finde nächstgelegene Punkte zu den Schwellwerten
-                point_20 = min(measurement, key=lambda p: abs(p[1] - threshold_20))
-                point_70 = min(measurement, key=lambda p: abs(p[1] - threshold_70))
-                
-                # Berechne Modul
+
+                # Initialisiere Indizes
+                index_20 = None
+                index_70 = None
+
+                # Suche nur in Datenpunkten VOR dem Maximum
+                for i, point in enumerate(measurement[:max_force_index]):
+                    if point[1] >= threshold_20 and index_20 is None:
+                        index_20 = i
+                    if point[1] >= threshold_70 and index_70 is None:
+                        index_70 = i
+
+                # Überprüfe, ob beide Punkte gefunden wurden
+                if index_20 is None or index_70 is None:
+                    self.logger.warning("Nicht genügend Werte vor Maximalkraft für die Berechnung.")
+                    self.force_moduli.append(0.0)
+                    continue
+
+                # Stelle sicher, dass index_20 kleiner ist als index_70
+                if index_20 > index_70:
+                    index_20, index_70 = index_70, index_20
+
+                # Hole die entsprechenden Punkte
+                point_20 = measurement[index_20]
+                point_70 = measurement[index_70]
+
+                # Berechne den Modul (Anstieg)
                 modulus = (point_70[1] - point_20[1]) / (point_70[0] - point_20[0])
                 self.force_moduli.append(round(modulus, 2))
-            
+
+                self.logger.debug(f"Modul berechnet: {modulus:.2f} "
+                                  f"(20% bei {point_20}, 70% bei {point_70})")
+
             except Exception as e:
                 self.logger.error(f"Fehler bei der Modulberechnung: {str(e)}")
                 self.force_moduli.append(0.0)
