@@ -11,10 +11,8 @@ class FileHandler:
     @staticmethod
     def select_analysis_type() -> str:
         """
-        Zeigt ein Fenster zur Auswahl des Analysetyps.
-
-        Returns:
-            '1' für Einzelanalyse, '2' für Mehrfachanalyse
+        Zeigt ein Fenster zur Auswahl des Analysetyps
+        Returns:'1' für Einzelanalyse, '2' für Mehrfachanalyse
         """
         root = tk.Tk()
         root.title("Yarn Pull-Out Analyzer - Analysetyp wählen")

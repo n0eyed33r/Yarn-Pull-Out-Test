@@ -11,6 +11,9 @@ import logging
 class YarnPulloutConfig:
     """Konfigurationsdaten für die Yarn Pull-Out Analyse"""
     data_ending: str = ".steps.tracking.csv"  # Dateiendung
+    min_force_threshold: float = 0.05  # kN minimaler Kraftwert
+    max_post_peak_distance: float = 1.0  # mmmaximale Distanz nach Kraftmax
+    force_drop_ratio: float = 0.5  # Anteil der Maximalkraft, bei dem die Analyse beendet wird
     distance_limit: float = 2.5  # mm
     force_threshold_low: float = 0.2  # 20% für Modulberechnung
     force_threshold_high: float = 0.7  # 70% für Modulberechnung
@@ -22,6 +25,7 @@ class YarnPulloutAnalyzer:
     def __init__(self, config: YarnPulloutConfig = YarnPulloutConfig()):
         self.config = config
         self.measurements: List[List[Tuple[float, float]]] = []
+        self.filtered_measurements: List[List[Tuple[float, float]]] = []
         self.max_forces: List[float] = []
         self.force_moduli: List[float] = []
         self.total_work: List[Tuple[int, float]] = []
@@ -48,16 +52,17 @@ class YarnPulloutAnalyzer:
     
     def load_data(self, filepath: Path) -> None:
         """
-        Lädt die Daten aus einer CSV-Datei.
-
-        Args:
-            filepath: Pfad zur CSV-Datei
+        Lädt die Daten aus einer CSV-Datei
+        Args: filepath: Pfad zur CSV-Datei
         """
+        
+        ''' wenn scheiße rauskommt, dann weil wieder die tabellen spalten nicht wie "genorm"
+            usecols=[7,8] sind ...'''
         try:
             dataset = pd.read_csv(
                 filepath,
                 sep=";",
-                usecols=[7, 8],  # [x in mm, y in kN]
+                usecols=[6, 7],  # [x in mm, y in kN]
                 decimal=',',
                 encoding='utf-8'
             )
@@ -79,15 +84,66 @@ class YarnPulloutAnalyzer:
             ]
             
             self.measurements.append(measurement_data)
-            # Finde maximale Kraft
-            max_force = max(measurement_data, key=lambda x: x[1])[1]
-            self.max_forces.append(max_force)
             
-            self.logger.info(f"Daten erfolgreich geladen: {filepath.name}")
+            # Filtere die Daten und füge sie der Liste hinzu
+            filtered_data = self._filter_measurement_data(measurement_data)
+            self.filtered_measurements.append(filtered_data)
+            
+            # Finde maximale Kraft in den gefilterten Daten
+            if filtered_data:
+                max_force = max(filtered_data, key=lambda x: x[1])[1]
+                self.max_forces.append(max_force)
+                self.logger.info(f"Maximale Kraft: {max_force:.2f} kN")
+            else:
+                self.max_forces.append(0.0)
+                self.logger.warning(f"Keine gültigen Datenpunkte nach Filterung für {filepath.name}")
+            
+            self.logger.info(f"Daten erfolgreich geladen und gefiltert: {filepath.name}")
         
         except Exception as e:
             self.logger.error(f"Fehler beim Laden der Datei {filepath}: {str(e)}")
             raise
+    
+    def _filter_measurement_data(self, measurement_data: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+        """
+        Filtert die Messdaten, um niedrige oder negative Kraftwerte zu entfernen und
+        begrenzt die Daten auf einen sinnvollen Bereich nach der Maximalkraft.
+
+        Args:
+            measurement_data: Originalmessdaten als Liste von (x, y) Tupeln
+
+        Returns:
+            Gefilterte Messdaten
+        """
+        if not measurement_data:
+            return []
+        
+        # Finde den Punkt mit maximaler Kraft und dessen Index
+        max_point = max(measurement_data, key=lambda point: point[1])
+        max_force = max_point[1]
+        max_force_index = measurement_data.index(max_point)
+        max_force_x = max_point[0]
+        
+        # Bestimme den Cutoff-Punkt nach dem Maximum
+        force_cutoff = max_force * self.config.force_drop_ratio
+        distance_cutoff = max_force_x + self.config.max_post_peak_distance
+        
+        filtered_data = []
+        
+        # Punkte vor dem Maximum: Alle Punkte mit Kraft >= min_force_threshold behalten
+        for point in measurement_data[:max_force_index + 1]:
+            if point[1] >= self.config.min_force_threshold:
+                filtered_data.append(point)
+        
+        # Punkte nach dem Maximum: Nur bis zum Cutoff behalten
+        # Wir beenden die Analyse, wenn entweder:
+        # 1. Die Kraft unter den Schwellwert fällt oder
+        # 2. Die Distanz den maximalen Nachbereich überschreitet
+        for point in measurement_data[max_force_index + 1:]:
+            if point[1] < self.config.min_force_threshold or point[1] < force_cutoff or point[0] > distance_cutoff:
+                break
+            filtered_data.append(point)
+        return filtered_data
 
     def calculate_force_modulus(self) -> None:
         """
@@ -99,7 +155,7 @@ class YarnPulloutAnalyzer:
         """
         self.force_moduli = []
 
-        for measurement, max_force in zip(self.measurements, self.max_forces):
+        for measurement, max_force in zip(self.filtered_measurements, self.max_forces):
             try:
                 # Finde Punkt mit maximaler Kraft und dessen Index
                 max_point = max(measurement, key=lambda point: point[1])
@@ -149,7 +205,7 @@ class YarnPulloutAnalyzer:
         """Berechnet die verrichtete Arbeit für alle Messungen"""
         self.total_work = []
         
-        for i, measurement in enumerate(self.measurements):
+        for i, measurement in enumerate(self.filtered_measurements):
             try:
                 # Filtere Daten bis zum Distance Limit
                 filtered_data = [
