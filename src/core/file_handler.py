@@ -11,8 +11,10 @@ class FileHandler:
     @staticmethod
     def select_analysis_type() -> str:
         """
-        Zeigt ein Fenster zur Auswahl des Analysetyps
-        Returns:'1' für Einzelanalyse, '2' für Mehrfachanalyse
+        Zeigt ein Fenster zur Auswahl des Analysetyps.
+
+        Returns:
+            '1' für Einzelanalyse, '2' für Mehrfachanalyse
         """
         root = tk.Tk()
         root.title("Yarn Pull-Out Analyzer - Analysetyp wählen")
@@ -57,7 +59,8 @@ class FileHandler:
         return Path(folder_path) if folder_path else None
     
     @staticmethod
-    def select_save_location(default_name: str, file_type: str = "Excel", initial_dir: Optional[Path] = None) -> Optional[Path]:
+    def select_save_location(default_name: str, file_type: str = "Excel", initial_dir: Optional[Path] = None) -> \
+    Optional[Path]:
         """Öffnet einen Dialog zur Auswahl des Speicherorts"""
         root = tk.Tk()
         root.withdraw()

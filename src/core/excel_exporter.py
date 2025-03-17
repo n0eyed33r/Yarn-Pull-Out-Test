@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional
 from src.core.file_handler import FileHandler
 
+
 class ExcelExporter:
     """Klasse für den Export von Analyseergebnissen nach Excel"""
     
